@@ -1,5 +1,6 @@
 <?php
 // File: classes/Order.php
+
 class Order {
     private $conn;
     
@@ -7,11 +8,14 @@ class Order {
         $this->conn = $db;
     }
 
+    // 1. Fungsi Checkout (User Bayar)
     public function checkout($userId) {
         $this->conn->begin_transaction();
         try {
-            // Panggil class Cart dan Menu di dalam fungsi ini
-            // Pastikan file ini di-include di api/order_api.php
+            // Include class dependency di dalam method
+            require_once 'Cart.php';
+            require_once 'Menu.php';
+
             $cartClass = new Cart($this->conn);
             $menuClass = new Menu($this->conn);
 
@@ -20,7 +24,7 @@ class Order {
             $total = 0;
             $items = [];
             
-            // 1. Validasi Stok & Hitung Total
+            // Validasi Stok
             while($row = $cartItems->fetch_assoc()){
                 if($row['stock'] < $row['quantity']) {
                     throw new Exception("Stok {$row['name']} habis! Sisa: {$row['stock']}");
@@ -31,25 +35,21 @@ class Order {
 
             if(empty($items)) throw new Exception("Keranjang kosong!");
 
-            // 2. Insert ke Tabel Orders (Status Langsung 'selesai')
+            // Buat Order (Status langsung 'selesai')
             $stmt = $this->conn->prepare("INSERT INTO orders (user_id, total_price, status) VALUES (?, ?, 'selesai')");
             $stmt->bind_param("ii", $userId, $total);
             $stmt->execute();
             $orderId = $this->conn->insert_id;
 
-            // 3. Masukkan Item & KURANGI STOK
+            // Masukkan Item & Kurangi Stok
             $stmtItem = $this->conn->prepare("INSERT INTO order_items (order_id, menu_id, quantity, price) VALUES (?, ?, ?, ?)");
             
             foreach($items as $item){
-                // Insert Item
                 $stmtItem->bind_param("iiii", $orderId, $item['menu_id'], $item['quantity'], $item['price']);
                 $stmtItem->execute();
-
-                // Kurangi Stok (Penting!)
-                $menuClass->reduceStock($item['menu_id'], $item['quantity']); // Pastikan method reduceStock ada di classes/Menu.php
+                $menuClass->reduceStock($item['menu_id'], $item['quantity']); 
             }
 
-            // 4. Hapus Keranjang
             $cartClass->clearCart($userId);
             
             $this->conn->commit();
@@ -61,9 +61,32 @@ class Order {
         }
     }
 
+    // 2. Riwayat User (Hanya pesanannya sendiri)
     public function getHistory($userId) {
         $stmt = $this->conn->prepare("SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC");
         $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        return $stmt->get_result();
+    }
+
+    // 3. [BARU] Riwayat Admin (Semua pesanan + Nama User)
+    public function getAllOrders() {
+        $query = "SELECT o.*, u.name as user_name 
+                  FROM orders o 
+                  JOIN users u ON o.user_id = u.user_id 
+                  ORDER BY o.created_at DESC";
+        $result = $this->conn->query($query);
+        return $result;
+    }
+
+    // 4. [BARU] Detail Pesanan (Item apa saja yg dibeli)
+    public function getOrderDetails($orderId) {
+        $query = "SELECT oi.*, m.name, m.image 
+                  FROM order_items oi 
+                  JOIN menu m ON oi.menu_id = m.menu_id 
+                  WHERE oi.order_id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $orderId);
         $stmt->execute();
         return $stmt->get_result();
     }

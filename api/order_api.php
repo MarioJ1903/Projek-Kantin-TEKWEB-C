@@ -4,13 +4,11 @@ session_start();
 header("Content-Type: application/json");
 
 include_once '../config/Database.php';
-include_once '../classes/Cart.php';
-include_once '../classes/Menu.php';
 include_once '../classes/Order.php';
 
-// Cek Login
+// Wajib Login
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(["status" => false, "message" => "Silakan login terlebih dahulu"]);
+    echo json_encode(["status" => false, "message" => "Akses ditolak"]);
     exit;
 }
 
@@ -19,20 +17,35 @@ $db = $database->conn;
 $order = new Order($db);
 
 $userId = $_SESSION['user_id'];
+$role = isset($_SESSION['role']) ? $_SESSION['role'] : 'user';
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
 if ($action == 'checkout') {
-    // Panggil fungsi checkout yang sudah kita buat
-    $result = $order->checkout($userId);
-    echo json_encode($result);
+    echo json_encode($order->checkout($userId));
 } 
 elseif ($action == 'history') {
-    // Untuk halaman history
+    // History User
     $result = $order->getHistory($userId);
     $data = [];
-    while ($row = $result->fetch_assoc()) {
-        $data[] = $row;
+    while ($row = $result->fetch_assoc()) $data[] = $row;
+    echo json_encode($data);
+}
+elseif ($action == 'admin_history') {
+    // History Admin (Cek Role)
+    if ($role === 'admin') {
+        $result = $order->getAllOrders();
+        $data = [];
+        while ($row = $result->fetch_assoc()) $data[] = $row;
+        echo json_encode($data);
+    } else {
+        echo json_encode([]);
     }
+}
+elseif ($action == 'details' && isset($_GET['order_id'])) {
+    // Detail Item (Bisa diakses User & Admin)
+    $result = $order->getOrderDetails($_GET['order_id']);
+    $data = [];
+    while ($row = $result->fetch_assoc()) $data[] = $row;
     echo json_encode($data);
 }
 ?>

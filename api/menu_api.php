@@ -1,5 +1,4 @@
 <?php
-// File: api/menu_api.php
 header("Content-Type: application/json");
 include_once '../config/Database.php';
 include_once '../classes/Menu.php';
@@ -15,36 +14,45 @@ if ($action == 'read') {
     echo json_encode($data);
 } 
 elseif ($action == 'create' && $_SERVER['REQUEST_METHOD'] == 'POST') {
-    
-    // 1. Logika Upload Gambar
-    $imageName = "default.jpg"; // Default jika user tidak upload gambar
-    
+    $imageName = "default.jpg"; 
     if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
         $targetDir = "../assets/img/";
-        
-        // Pastikan folder ada
-        if (!file_exists($targetDir)) {
-            mkdir($targetDir, 0777, true);
+        if (!file_exists($targetDir)) mkdir($targetDir, 0777, true);
+        $newFileName = time() . "_" . uniqid() . "." . pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
+        if (move_uploaded_file($_FILES["image"]["tmp_name"], $targetDir . $newFileName)) {
+            $imageName = $newFileName;
         }
+    }
+    if($menu->create($_POST['name'], $_POST['price'], $_POST['stock'], $imageName)){
+        echo json_encode(["status" => "success"]);
+    } else {
+        echo json_encode(["status" => "error"]);
+    }
+} 
+// --- FITUR BARU: UPDATE ---
+elseif ($action == 'update' && $_SERVER['REQUEST_METHOD'] == 'POST') {
+    $id = $_POST['menu_id'];
+    $name = $_POST['name'];
+    $price = $_POST['price'];
+    $stock = $_POST['stock'];
+    
+    $imageName = null; // Default null artinya tidak ganti gambar
 
-        // Rename file agar unik (pake timestamp)
-        $fileExtension = pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
-        $newFileName = time() . "_" . uniqid() . "." . $fileExtension;
-        $targetFile = $targetDir . $newFileName;
-
-        // Pindahkan file
-        if (move_uploaded_file($_FILES["image"]["tmp_name"], $targetFile)) {
+    // Cek jika ada upload gambar baru
+    if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+        $targetDir = "../assets/img/";
+        $newFileName = time() . "_" . uniqid() . "." . pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
+        if (move_uploaded_file($_FILES["image"]["tmp_name"], $targetDir . $newFileName)) {
             $imageName = $newFileName;
         }
     }
 
-    // 2. Simpan ke Database
-    if($menu->create($_POST['name'], $_POST['price'], $_POST['stock'], $imageName)){
+    if($menu->update($id, $name, $price, $stock, $imageName)){
         echo json_encode(["status" => "success"]);
     } else {
-        echo json_encode(["status" => "error", "message" => "Gagal menyimpan ke database"]);
+        echo json_encode(["status" => "error", "message" => "Gagal update"]);
     }
-} 
+}
 elseif ($action == 'delete') {
     if($menu->delete($_POST['id'])) echo json_encode(["status" => "success"]);
 }
