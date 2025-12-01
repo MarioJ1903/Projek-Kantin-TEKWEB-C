@@ -1,5 +1,18 @@
 <!DOCTYPE html>
 <html lang="id">
+
+<?php
+// 1. Panggil script Auto Login
+include "../config/auto_login.php";
+
+// 2. Cek Login
+// Jika setelah dicek auto_login ternyata masih belum login juga, baru tendang ke halaman login
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+?>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
