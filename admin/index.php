@@ -2,7 +2,11 @@
 <html lang="id">
 <?php
 include "../config/auto_login.php";
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') { header("Location: ../public/login.php"); exit(); }
+// Cek sesi admin
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') { 
+    header("Location: ../public/login.php"); 
+    exit(); 
+}
 ?>
 <head>
     <meta charset="UTF-8">
@@ -13,12 +17,42 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') { header("Loca
     
     <style>
         body { font-family: 'Poppins', sans-serif; background-color: #f4f6f9; }
+        
+        /* Navbar Gradient */
         .navbar { background: linear-gradient(to right, #2b32b2, #1488cc); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .navbar-brand { font-weight: 700; letter-spacing: 1px; }
         .nav-link { color: rgba(255,255,255,0.85) !important; font-weight: 400; transition: 0.3s; }
         .nav-link:hover { color: #fff !important; transform: translateY(-1px); }
         .nav-link.active { font-weight: 700 !important; color: #fff !important; border-bottom: 2px solid rgba(255,255,255,0.5); }
+        
         .card-shadow { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); background: white; }
+
+        /* --- TOMBOL LIHAT WEB LUCU --- */
+        .btn-visit-web {
+            background-color: #fff;
+            color: #2b32b2;
+            border-radius: 50px;
+            padding: 8px 25px;
+            font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            border: 2px solid transparent;
+        }
+        .btn-visit-web:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 0 rgba(0,0,0,0.1);
+            color: #1488cc;
+            background-color: #f0f8ff;
+        }
+        .btn-visit-web:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.1);
+        }
+        .btn-visit-web i { transition: transform 0.3s ease; }
+        .btn-visit-web:hover i { transform: translateX(3px) rotate(-15deg); }
     </style>
 </head>
 <body>
@@ -35,8 +69,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') { header("Loca
                     <li class="nav-item"><a class="nav-link" href="orders.php">Laporan Transaksi</a></li>
                 </ul>
                 <div class="d-flex align-items-center">
-                    <a href="../public/menu.php" class="btn btn-outline-light btn-sm me-3" target="_blank">Lihat Web</a>
-                    <a href="../api/auth_api.php?action=logout" class="btn btn-danger btn-sm rounded-pill px-3">Logout</a>
+                    <a href="../public/menu.php" class="btn-visit-web me-3" target="_blank">
+                        <i class="fas fa-rocket me-2"></i> Lihat Web
+                    </a>
+                    <a href="../api/auth_api.php?action=logout" class="btn btn-danger btn-sm rounded-pill px-3 fw-bold shadow-sm">
+                        Logout <i class="fas fa-sign-out-alt ms-1"></i>
+                    </a>
                 </div>
             </div>
         </div>
@@ -122,13 +160,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') { header("Loca
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let allMenus = []; // Simpan data menu di sini
+        let allMenus = [];
 
         async function loadAdminMenu() {
             try {
                 const res = await fetch('../api/menu_api.php?action=read');
                 const data = await res.json();
-                allMenus = data; // Simpan ke variabel global
+                allMenus = data;
                 
                 let html = '';
                 data.forEach((item, index) => {
@@ -140,12 +178,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') { header("Loca
                         <td>Rp ${new Intl.NumberFormat('id-ID').format(item.price)}</td>
                         <td><span class="badge bg-info text-dark">${item.stock}</span></td>
                         <td>
-                            <button class="btn btn-sm btn-warning text-dark rounded-circle me-1" onclick="openEditModal(${index})">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger rounded-circle" onclick="deleteMenu(${item.menu_id})">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <button class="btn btn-sm btn-warning text-dark rounded-circle me-1" onclick="openEditModal(${index})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger rounded-circle" onclick="deleteMenu(${item.menu_id})"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>`;
                 });
@@ -153,18 +187,15 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') { header("Loca
             } catch (error) { console.error(error); }
         }
 
-        // --- FUNGSI BUKA MODAL EDIT ---
         function openEditModal(index) {
             const item = allMenus[index];
             document.getElementById('edit_menu_id').value = item.menu_id;
             document.getElementById('edit_name').value = item.name;
             document.getElementById('edit_price').value = item.price;
             document.getElementById('edit_stock').value = item.stock;
-            
             new bootstrap.Modal(document.getElementById('editModal')).show();
         }
 
-        // --- PROSES UPDATE MENU ---
         document.getElementById('formEditMenu').addEventListener('submit', async function(e){
             e.preventDefault();
             const formData = new FormData(this);
@@ -179,7 +210,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') { header("Loca
             } catch (error) { alert("Kesalahan sistem."); }
         });
 
-        // --- PROSES TAMBAH MENU ---
         document.getElementById('formAddMenu').addEventListener('submit', async function(e){
             e.preventDefault();
             const formData = new FormData(this);
