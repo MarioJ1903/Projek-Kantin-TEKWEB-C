@@ -162,31 +162,39 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     <script>
         let allMenus = [];
 
+        // 1. Load Data Menu
         async function loadAdminMenu() {
             try {
                 const res = await fetch('../api/menu_api.php?action=read');
-                const data = await res.json();
-                allMenus = data;
-                
-                let html = '';
-                data.forEach((item, index) => {
-                    let imgSrc = item.image && item.image !== 'default.jpg' ? `../assets/img/${item.image}` : `https://placehold.co/100x100?text=${item.name.substring(0,3)}`;
-                    html += `
-                    <tr>
-                        <td class="ps-4"><img src="${imgSrc}" class="rounded shadow-sm" width="50" height="50" style="object-fit:cover"></td>
-                        <td class="fw-bold">${item.name}</td>
-                        <td>Rp ${new Intl.NumberFormat('id-ID').format(item.price)}</td>
-                        <td><span class="badge bg-info text-dark">${item.stock}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-warning text-dark rounded-circle me-1" onclick="openEditModal(${index})"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-danger rounded-circle" onclick="deleteMenu(${item.menu_id})"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>`;
-                });
-                document.getElementById('admin-menu-list').innerHTML = html;
-            } catch (error) { console.error(error); }
+                // Cek jika response bukan JSON (misal error PHP)
+                const text = await res.text();
+                try {
+                    const data = JSON.parse(text);
+                    allMenus = data;
+                    
+                    let html = '';
+                    data.forEach((item, index) => {
+                        let imgSrc = item.image && item.image !== 'default.jpg' ? `../assets/img/${item.image}` : `https://placehold.co/100x100?text=${item.name.substring(0,3)}`;
+                        html += `
+                        <tr>
+                            <td class="ps-4"><img src="${imgSrc}" class="rounded shadow-sm" width="50" height="50" style="object-fit:cover"></td>
+                            <td class="fw-bold">${item.name}</td>
+                            <td>Rp ${new Intl.NumberFormat('id-ID').format(item.price)}</td>
+                            <td><span class="badge bg-info text-dark">${item.stock}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-warning text-dark rounded-circle me-1" onclick="openEditModal(${index})"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-danger rounded-circle" onclick="deleteMenu(${item.menu_id})"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>`;
+                    });
+                    document.getElementById('admin-menu-list').innerHTML = html;
+                } catch (err) {
+                    console.error("Error parsing JSON:", text);
+                }
+            } catch (error) { console.error("Network error:", error); }
         }
 
+        // 2. Buka Modal Edit
         function openEditModal(index) {
             const item = allMenus[index];
             document.getElementById('edit_menu_id').value = item.menu_id;
@@ -196,35 +204,74 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
             new bootstrap.Modal(document.getElementById('editModal')).show();
         }
 
+        // 3. Proses Edit Menu (VERSI ROBUST/KUAT)
         document.getElementById('formEditMenu').addEventListener('submit', async function(e){
             e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
             const formData = new FormData(this);
             try {
-                const res = await fetch('../api/menu_api.php?action=update', { method: 'POST', body: formData });
-                const result = await res.json();
-                if(result.status === 'success') {
-                    bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-                    loadAdminMenu();
-                    alert("Menu berhasil diupdate!");
-                } else { alert("Gagal update: " + result.message); }
-            } catch (error) { alert("Kesalahan sistem."); }
+                const response = await fetch('../api/menu_api.php?action=update', { method: 'POST', body: formData });
+                const text = await response.text(); // Baca text dulu untuk debugging
+                
+                try {
+                    const result = JSON.parse(text);
+                    if(result.status === 'success') {
+                        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                        loadAdminMenu();
+                        alert("✅ Menu berhasil diupdate!");
+                    } else { alert("❌ Gagal update: " + result.message); }
+                } catch (err) {
+                    console.error("Server Error Response:", text);
+                    alert("Terjadi error di server. Cek Console (F12) untuk detail.");
+                }
+            } catch (error) { 
+                console.error(error);
+                alert("Gagal terhubung ke server."); 
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
         });
 
+        // 4. Proses Tambah Menu
         document.getElementById('formAddMenu').addEventListener('submit', async function(e){
             e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
             const formData = new FormData(this);
             try {
-                const res = await fetch('../api/menu_api.php?action=create', { method: 'POST', body: formData });
-                const result = await res.json();
-                if(result.status === 'success') {
-                    bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
-                    this.reset();
-                    loadAdminMenu();
-                    alert("Menu berhasil ditambahkan!");
-                } else { alert("Gagal: " + result.message); }
-            } catch (error) { alert("Kesalahan sistem."); }
+                const response = await fetch('../api/menu_api.php?action=create', { method: 'POST', body: formData });
+                const text = await response.text();
+
+                try {
+                    const result = JSON.parse(text);
+                    if(result.status === 'success') {
+                        bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+                        this.reset();
+                        loadAdminMenu();
+                        alert("✅ Menu berhasil ditambahkan!");
+                    } else { alert("❌ Gagal: " + result.message); }
+                } catch (err) {
+                    console.error("Server Error Response:", text);
+                    alert("Terjadi error di server. Cek Console (F12).");
+                }
+            } catch (error) { 
+                console.error(error);
+                alert("Gagal terhubung ke server.");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
         });
 
+        // 5. Hapus Menu
         async function deleteMenu(id) {
             if(!confirm('Hapus menu ini?')) return;
             const formData = new FormData(); formData.append('id', id);

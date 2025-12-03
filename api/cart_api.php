@@ -1,11 +1,13 @@
 <?php
+// File: api/cart_api.php
 session_start();
 header("Content-Type: application/json");
 include_once '../config/Database.php';
 include_once '../classes/Cart.php';
 
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(["status" => "error", "message" => "Login dulu"]); exit;
+    echo json_encode(["status" => "error", "message" => "Silakan login terlebih dahulu"]);
+    exit;
 }
 
 $db = new Database();
@@ -15,8 +17,15 @@ $action = $_GET['action'] ?? '';
 
 if ($action == 'add') {
     $input = json_decode(file_get_contents("php://input"), true);
-    if ($cart->addToCart($userId, $input['menu_id'])) {
+    
+    // UPDATE: Ambil qty dari input, jika tidak ada default 1
+    $qty = isset($input['quantity']) ? (int)$input['quantity'] : 1;
+    if ($qty < 1) $qty = 1; // Validasi minimal 1
+
+    if ($cart->addToCart($userId, $input['menu_id'], $qty)) {
         echo json_encode(["status" => "success"]);
+    } else {
+        echo json_encode(["status" => "error", "message" => "Gagal masuk keranjang"]);
     }
 } elseif ($action == 'read') {
     $res = $cart->getCart($userId);

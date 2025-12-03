@@ -8,18 +8,22 @@ class Cart {
         $this->conn = $db;
     }
 
-    public function addToCart($userId, $menuId) {
+    // UPDATE: Menambahkan parameter $qty
+    public function addToCart($userId, $menuId, $qty) {
         // Cek duplikat
         $check = $this->conn->prepare("SELECT quantity FROM " . $this->table . " WHERE user_id = ? AND menu_id = ?");
         $check->bind_param("ii", $userId, $menuId);
         $check->execute();
         
         if ($check->get_result()->num_rows > 0) {
-            $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET quantity = quantity + 1 WHERE user_id = ? AND menu_id = ?");
+            // Jika sudah ada, tambahkan dengan jumlah inputan user (bukan cuma +1)
+            $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET quantity = quantity + ? WHERE user_id = ? AND menu_id = ?");
+            $stmt->bind_param("iii", $qty, $userId, $menuId);
         } else {
-            $stmt = $this->conn->prepare("INSERT INTO " . $this->table . " (user_id, menu_id, quantity) VALUES (?, ?, 1)");
+            // Jika baru, masukkan sesuai jumlah inputan
+            $stmt = $this->conn->prepare("INSERT INTO " . $this->table . " (user_id, menu_id, quantity) VALUES (?, ?, ?)");
+            $stmt->bind_param("iii", $userId, $menuId, $qty);
         }
-        $stmt->bind_param("ii", $userId, $menuId);
         return $stmt->execute();
     }
 
