@@ -16,9 +16,15 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
         body { font-family: 'Poppins', sans-serif; background-color: #f4f6f9; }
         .navbar { background: linear-gradient(to right, #2b32b2, #1488cc); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .navbar-brand { font-weight: 700; letter-spacing: 1px; }
-        .nav-link { color: rgba(255,255,255,0.85) !important; font-weight: 400; }
+        .nav-link { color: rgba(255,255,255,0.85) !important; font-weight: 400; padding-bottom: 5px; }
         .nav-link:hover { color: #fff !important; transform: translateY(-1px); }
-        .nav-link.active { font-weight: 700 !important; color: #fff !important; } /* BOLD ACTIVE */
+        
+        /* --- PERBAIKAN: GARIS BAWAH PADA TAB AKTIF --- */
+        .nav-link.active { 
+            font-weight: 700 !important; 
+            color: #fff !important; 
+            border-bottom: 3px solid #fff; /* Garis Bawah Putih */
+        }
 
         .card-cart { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); background: white; }
         .table thead th { background-color: #f8f9fa; border-bottom: 2px solid #eef2f7; color: #2b32b2; font-weight: 600; }
@@ -93,6 +99,27 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
             if(data.status){ alert('Berhasil!'); window.location.href='orders.php'; } else { alert(data.message); } } catch(e){} 
         }
         loadCart();
+
+        // FUNGSI UPDATE JUMLAH ITEM DI KERANJANG PADA NAVBAR
+        async function updateCartBadge() {
+            try {
+                const res = await fetch('../api/cart_api.php?action=read');
+                const data = await res.json();
+                let totalItems = 0;
+                
+                if(Array.isArray(data)) {
+                    data.forEach(item => totalItems += item.quantity);
+                }
+                
+                // Cari elemen badge (meskipun tidak ada ID-nya di kode awal, 
+                // Karena di layout Keranjang ini tidak ada badge merahnya,
+                // script ini hanya preventif agar tidak error di console.
+            } catch (e) {
+                console.log("Gagal load cart count");
+            }
+        }
+
+        updateCartBadge();
     </script>
 </body>
 </html>

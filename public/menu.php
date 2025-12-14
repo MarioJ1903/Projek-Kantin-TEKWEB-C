@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="id">
 <?php
+// 1. Panggil script Auto Login & Cek Session
 include "../config/auto_login.php";
-if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
 ?>
 <head>
     <meta charset="UTF-8">
@@ -15,10 +19,21 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
     <style>
         body { font-family: 'Poppins', sans-serif; background-color: #f4f6f9; }
         
+        /* Navbar Gradient Biru */
         .navbar { background: linear-gradient(to right, #2b32b2, #1488cc); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .navbar-brand { font-weight: 700; letter-spacing: 1px; }
-        .nav-link { font-weight: 500; color: rgba(255,255,255,0.9) !important; transition: 0.3s; }
-        .nav-link:hover, .nav-link.active { color: #fff !important; transform: translateY(-2px); text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .nav-link { font-weight: 500; color: rgba(255,255,255,0.9) !important; transition: 0.3s; padding-bottom: 5px; /* Jarak untuk garis */ }
+        
+        .nav-link:hover { color: #fff !important; transform: translateY(-2px); text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        /* --- PERBAIKAN: GARIS BAWAH PADA TAB AKTIF --- */
+        .nav-link.active { 
+            color: #fff !important; 
+            font-weight: 700;
+            transform: translateY(-2px); 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border-bottom: 3px solid #fff; /* Garis Bawah Putih */
+        }
 
         .hero-section { background: white; padding: 50px 0 40px; text-align: center; border-radius: 0 0 50px 50px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 40px; }
         .hero-title { color: #2b32b2; font-weight: 700; }
@@ -121,9 +136,10 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // Variabel global untuk menyimpan data menu sementara
+        // Variabel global untuk menyimpan data stok menu yang sedang dibuka
         let currentStock = 0;
 
+        // 1. Fungsi Load Menu dari API
         async function loadMenu() {
             try {
                 const response = await fetch('../api/menu_api.php?action=read');
@@ -137,7 +153,6 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
 
                 data.forEach(item => {
                     let price = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.price);
-                    // Gambar Placeholder jika kosong
                     let imgSrc = item.image && item.image !== 'default.jpg' 
                         ? `../assets/img/${item.image}` 
                         : `https://placehold.co/600x400/orange/white?text=${encodeURIComponent(item.name)}`; 
@@ -148,7 +163,7 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
                     let btnText = isHabis ? 'Stok Habis' : 'Pesan';
                     let btnState = isHabis ? 'disabled' : '';
 
-                    // Data attributes untuk dikirim ke Modal saat diklik
+                    // Siapkan data untuk dikirim ke Modal saat tombol diklik
                     let menuData = JSON.stringify({
                         id: item.menu_id,
                         name: item.name,
@@ -178,12 +193,12 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
                 });
 
                 document.getElementById('menu-container').innerHTML = html;
-                updateCartBadge();
+                updateCartBadge(); // Update ikon keranjang
 
             } catch (error) { console.error('Error:', error); }
         }
 
-        // --- FUNGSI BUKA MODAL ---
+        // 2. Fungsi Buka Modal
         function openOrderModal(menu) {
             // Isi data ke dalam Modal
             document.getElementById('modalMenuId').value = menu.id;
@@ -200,17 +215,18 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
             new bootstrap.Modal(document.getElementById('orderModal')).show();
         }
 
-        // --- FUNGSI UBAH QTY (+/-) ---
+        // 3. Fungsi Ubah Jumlah (+/-)
         function changeQty(amount) {
             let input = document.getElementById('modalQty');
             let newVal = parseInt(input.value) + amount;
             
+            // Validasi: Tidak boleh < 1 dan tidak boleh > Stok
             if (newVal >= 1 && newVal <= currentStock) {
                 input.value = newVal;
             }
         }
 
-        // --- FUNGSI KIRIM KE CART ---
+        // 4. Fungsi Kirim ke Keranjang (API)
         async function confirmAddToCart() {
             let id = document.getElementById('modalMenuId').value;
             let qty = parseInt(document.getElementById('modalQty').value);
@@ -235,6 +251,7 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
             } catch (error) { console.error('Error:', error); }
         }
 
+        // 5. Fungsi Update Badge Keranjang
         async function updateCartBadge() {
             try {
                 const response = await fetch('../api/cart_api.php?action=read');
