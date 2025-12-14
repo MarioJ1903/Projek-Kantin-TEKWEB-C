@@ -22,21 +22,49 @@ if (!isset($_SESSION['user_id'])) {
         /* Navbar Gradient Biru */
         .navbar { background: linear-gradient(to right, #2b32b2, #1488cc); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .navbar-brand { font-weight: 700; letter-spacing: 1px; }
-        .nav-link { font-weight: 500; color: rgba(255,255,255,0.9) !important; transition: 0.3s; padding-bottom: 5px; /* Jarak untuk garis */ }
-        
-        .nav-link:hover { color: #fff !important; transform: translateY(-2px); text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .nav-link { font-weight: 500; color: rgba(255,255,255,0.9) !important; transition: 0.3s; }
+        .nav-link:hover{ color: #fff !important; transform: translateY(-2px); text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
-        /* --- PERBAIKAN: GARIS BAWAH PADA TAB AKTIF --- */
         .nav-link.active { 
+            font-weight: 700; 
             color: #fff !important; 
-            font-weight: 700;
-            transform: translateY(-2px); 
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            border-bottom: 3px solid #fff; /* Garis Bawah Putih */
+            border-bottom: 3px solid #fff; /* GARIS BAWAH PUTIH */
         }
 
         .hero-section { background: white; padding: 50px 0 40px; text-align: center; border-radius: 0 0 50px 50px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 40px; }
         .hero-title { color: #2b32b2; font-weight: 700; }
+
+        /* --- UNTUK SEARCH & FILTER --- */
+        .search-container {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 10px 15px;
+            flex-grow: 1;
+            outline: none;
+            transition: 0.3s;
+        }
+        .search-input:focus { border-color: #2b32b2; box-shadow: 0 0 0 3px rgba(43, 50, 178, 0.1); }
+        .filter-select {
+            border: none;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-weight: 600;
+            color: #555;
+            outline: none;
+            cursor: pointer;
+        }
 
         /* Card Menu Styles */
         .card-menu { border: none; border-radius: 20px; background: white; transition: all 0.3s; box-shadow: 0 10px 20px rgba(0,0,0,0.05); overflow: hidden; height: 100%; position: relative; }
@@ -97,11 +125,39 @@ if (!isset($_SESSION['user_id'])) {
     </section>
 
     <div class="container pb-5">
+        
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="search-container">
+                    <i class="fas fa-search text-muted ms-2"></i>
+                    
+                    <input type="text" id="searchInput" class="search-input" placeholder="Cari menu...">
+                    
+                    <select id="categoryFilter" class="filter-select" onchange="applyFilter()">
+                        <option value="all">Semua</option>
+                        <option value="makanan">Makanan</option>
+                        <option value="minuman">Minuman</option>
+                    </select>
+
+                    <select id="sortFilter" class="filter-select" onchange="applyFilter()">
+                        <option value="default">Urutkan</option>
+                        <option value="price_asc">Harga Terendah</option>
+                        <option value="price_desc">Harga Tertinggi</option>
+                        <option value="stock_desc">Stok Terbanyak</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <div class="row g-4" id="menu-container">
             <div class="col-12 text-center py-5">
                 <div class="spinner-border text-primary" role="status"></div>
                 <p class="mt-2 text-muted">Sedang mengambil daftar menu...</p>
             </div>
+        </div>
+
+        <div id="no-result" class="col-12 text-center py-5 d-none">
+            <h5 class="text-muted">Menu tidak ditemukan.</h5>
         </div>
     </div>
 
@@ -136,130 +192,146 @@ if (!isset($_SESSION['user_id'])) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // Variabel global untuk menyimpan data stok menu yang sedang dibuka
         let currentStock = 0;
+        let allMenus = []; // Simpan semua data menu disini
 
         // 1. Fungsi Load Menu dari API
         async function loadMenu() {
             try {
                 const response = await fetch('../api/menu_api.php?action=read');
                 const data = await response.json();
-                let html = '';
                 
-                if(data.length === 0) {
-                    document.getElementById('menu-container').innerHTML = '<div class="col-12 text-center text-muted"><h5>Belum ada menu tersedia.</h5></div>';
-                    return;
-                }
-
-                data.forEach(item => {
-                    let price = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.price);
-                    let imgSrc = item.image && item.image !== 'default.jpg' 
-                        ? `../assets/img/${item.image}` 
-                        : `https://placehold.co/600x400/orange/white?text=${encodeURIComponent(item.name)}`; 
-                    
-                    let isHabis = item.stock == 0;
-                    let badgeClass = isHabis ? 'bg-secondary' : (item.stock < 5 ? 'bg-danger' : 'bg-success');
-                    let badgeText = isHabis ? 'Habis' : `Stok: ${item.stock}`;
-                    let btnText = isHabis ? 'Stok Habis' : 'Pesan';
-                    let btnState = isHabis ? 'disabled' : '';
-
-                    // Siapkan data untuk dikirim ke Modal saat tombol diklik
-                    let menuData = JSON.stringify({
-                        id: item.menu_id,
-                        name: item.name,
-                        price: item.price,
-                        stock: item.stock,
-                        image: imgSrc
-                    }).replace(/"/g, '&quot;');
-
-                    html += `
-                    <div class="col-12 col-sm-6 col-lg-3">
-                        <div class="card card-menu h-100">
-                            <div class="card-img-wrapper">
-                                <span class="stock-badge ${badgeClass}">${badgeText}</span>
-                                <img src="${imgSrc}" class="card-img-top" alt="${item.name}">
-                            </div>
-                            <div class="card-body d-flex flex-column p-4">
-                                <h5 class="fw-bold mb-1 text-truncate">${item.name}</h5>
-                                <div class="mt-auto">
-                                    <p class="price-tag mb-3">${price}</p>
-                                    <button onclick="openOrderModal(${menuData})" class="btn btn-pesan shadow-sm" ${btnState}>
-                                        <i class="fas fa-plus-circle me-1"></i> ${btnText}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                });
-
-                document.getElementById('menu-container').innerHTML = html;
-                updateCartBadge(); // Update ikon keranjang
+                allMenus = data; // Simpan ke variabel global
+                renderMenu(allMenus); // Tampilkan awal
+                updateCartBadge();
 
             } catch (error) { console.error('Error:', error); }
         }
 
-        // 2. Fungsi Buka Modal
+        // 2. Fungsi Render HTML (Pisah dari load agar bisa dipanggil filter)
+        function renderMenu(data) {
+            const container = document.getElementById('menu-container');
+            const noResult = document.getElementById('no-result');
+            let html = '';
+            
+            if(data.length === 0) {
+                container.innerHTML = '';
+                noResult.classList.remove('d-none');
+                return;
+            }
+            noResult.classList.add('d-none');
+
+            data.forEach(item => {
+                let price = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.price);
+                let imgSrc = item.image && item.image !== 'default.jpg' 
+                    ? `../assets/img/${item.image}` 
+                    : `https://placehold.co/600x400/orange/white?text=${encodeURIComponent(item.name)}`; 
+                
+                let isHabis = item.stock == 0;
+                let badgeClass = isHabis ? 'bg-secondary' : (item.stock < 5 ? 'bg-danger' : 'bg-success');
+                let badgeText = isHabis ? 'Habis' : `Stok: ${item.stock}`;
+                let btnText = isHabis ? 'Stok Habis' : 'Pesan';
+                let btnState = isHabis ? 'disabled' : '';
+
+                let menuData = JSON.stringify({
+                    id: item.menu_id, name: item.name, price: item.price, stock: item.stock, image: imgSrc
+                }).replace(/"/g, '&quot;');
+
+                html += `
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card card-menu h-100">
+                        <div class="card-img-wrapper">
+                            <span class="stock-badge ${badgeClass}">${badgeText}</span>
+                            <img src="${imgSrc}" class="card-img-top" alt="${item.name}">
+                        </div>
+                        <div class="card-body d-flex flex-column p-4">
+                            <h5 class="fw-bold mb-1 text-truncate">${item.name}</h5>
+                            <div class="mt-auto">
+                                <p class="price-tag mb-3">${price}</p>
+                                <button onclick="openOrderModal(${menuData})" class="btn btn-pesan shadow-sm" ${btnState}>
+                                    <i class="fas fa-plus-circle me-1"></i> ${btnText}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // 3. LOGIKA FILTER & SEARCH
+        function applyFilter() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const sortType = document.getElementById('sortFilter').value;
+
+            // Filter
+            let filtered = allMenus.filter(item => {
+                const matchName = item.name.toLowerCase().includes(keyword);
+                
+                // Deteksi Minuman (Hanya jika kata utuh)
+                const isDrink = /\b(es|teh|kopi|coffee|jus|juice|air|susu|milk|cappucino|drink|latte|mineral|botol)\b/i.test(item.name);
+                
+                let matchCategory = true;
+                if (category === 'makanan') matchCategory = !isDrink;
+                if (category === 'minuman') matchCategory = isDrink;
+
+                return matchName && matchCategory;
+            });
+
+            // Sortir
+            if (sortType === 'price_asc') filtered.sort((a, b) => a.price - b.price);
+            else if (sortType === 'price_desc') filtered.sort((a, b) => b.price - a.price);
+            else if (sortType === 'stock_desc') filtered.sort((a, b) => b.stock - a.stock);
+
+            renderMenu(filtered);
+        }
+
+        document.getElementById('searchInput').addEventListener('keyup', applyFilter);
+
+        // --- FUNGSI MODAL & CART  ---
         function openOrderModal(menu) {
-            // Isi data ke dalam Modal
             document.getElementById('modalMenuId').value = menu.id;
             document.getElementById('modalMenuName').innerText = menu.name;
             document.getElementById('modalMenuPrice').innerText = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(menu.price);
             document.getElementById('modalMenuImg').src = menu.image;
             document.getElementById('modalMenuStock').innerText = menu.stock;
-            
-            // Reset qty ke 1
             document.getElementById('modalQty').value = 1;
             currentStock = menu.stock;
-
-            // Tampilkan Modal
             new bootstrap.Modal(document.getElementById('orderModal')).show();
         }
 
-        // 3. Fungsi Ubah Jumlah (+/-)
         function changeQty(amount) {
             let input = document.getElementById('modalQty');
             let newVal = parseInt(input.value) + amount;
-            
-            // Validasi: Tidak boleh < 1 dan tidak boleh > Stok
-            if (newVal >= 1 && newVal <= currentStock) {
-                input.value = newVal;
-            }
+            if (newVal >= 1 && newVal <= currentStock) input.value = newVal;
         }
 
-        // 4. Fungsi Kirim ke Keranjang (API)
         async function confirmAddToCart() {
             let id = document.getElementById('modalMenuId').value;
             let qty = parseInt(document.getElementById('modalQty').value);
-
             try {
                 const response = await fetch('../api/cart_api.php?action=add', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ menu_id: id, quantity: qty })
                 });
-                
                 const result = await response.json();
-
                 if (result.status === 'success') {
-                    // Tutup Modal
                     bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide();
                     updateCartBadge();
                     alert(`✅ Berhasil menambahkan ${qty} item ke keranjang!`);
-                } else {
-                    alert("❌ " + result.message);
-                }
+                } else { alert("❌ " + result.message); }
             } catch (error) { console.error('Error:', error); }
         }
 
-        // 5. Fungsi Update Badge Keranjang
         async function updateCartBadge() {
             try {
                 const response = await fetch('../api/cart_api.php?action=read');
                 const data = await response.json();
                 let totalItems = 0;
-                if(Array.isArray(data)) {
-                    data.forEach(item => totalItems += item.quantity);
-                }
+                if(Array.isArray(data)) { data.forEach(item => totalItems += item.quantity); }
                 document.getElementById('cart-count').innerText = totalItems;
             } catch (e) { }
         }

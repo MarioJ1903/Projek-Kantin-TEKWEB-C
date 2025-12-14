@@ -22,7 +22,7 @@ if (!isset($_SESSION['user_id'])) {
             background-color: #f4f6f9; 
         }
         
-        /* --- NAVBAR STYLE (SAMA PERSIS DENGAN MENU.PHP) --- */
+        /* --- NAVBAR STYLE  --- */
         /* Navbar Gradient Biru */
         .navbar { background: linear-gradient(to right, #2b32b2, #1488cc); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .navbar-brand { font-weight: 700; letter-spacing: 1px; }
@@ -231,7 +231,7 @@ if (!isset($_SESSION['user_id'])) {
 
         // Panggil fungsi saat halaman siap
         loadHistory();
-        updateCartBadge(); // Ini yang membuat angka di navbar muncul
+        updateCartBadge(); // membuat angka di navbar muncul
     </script>
 </body>
 </html>

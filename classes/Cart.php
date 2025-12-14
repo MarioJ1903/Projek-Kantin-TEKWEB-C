@@ -1,5 +1,4 @@
 <?php
-// File: classes/Cart.php
 class Cart {
     private $conn;
     private $table = "cart";
@@ -8,21 +7,31 @@ class Cart {
         $this->conn = $db;
     }
 
-    // UPDATE: Menambahkan parameter $qty
     public function addToCart($userId, $menuId, $qty) {
-        // Cek duplikat
         $check = $this->conn->prepare("SELECT quantity FROM " . $this->table . " WHERE user_id = ? AND menu_id = ?");
         $check->bind_param("ii", $userId, $menuId);
         $check->execute();
         
         if ($check->get_result()->num_rows > 0) {
-            // Jika sudah ada, tambahkan dengan jumlah inputan user (bukan cuma +1)
             $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET quantity = quantity + ? WHERE user_id = ? AND menu_id = ?");
             $stmt->bind_param("iii", $qty, $userId, $menuId);
         } else {
-            // Jika baru, masukkan sesuai jumlah inputan
             $stmt = $this->conn->prepare("INSERT INTO " . $this->table . " (user_id, menu_id, quantity) VALUES (?, ?, ?)");
             $stmt->bind_param("iii", $userId, $menuId, $qty);
+        }
+        return $stmt->execute();
+    }
+
+    // --- FITUR UPDATE JUMLAH (BARU) ---
+    public function updateQuantity($userId, $menuId, $qty) {
+        if ($qty <= 0) {
+            // Hapus jika 0
+            $stmt = $this->conn->prepare("DELETE FROM " . $this->table . " WHERE user_id = ? AND menu_id = ?");
+            $stmt->bind_param("ii", $userId, $menuId);
+        } else {
+            // Update jumlah
+            $stmt = $this->conn->prepare("UPDATE " . $this->table . " SET quantity = ? WHERE user_id = ? AND menu_id = ?");
+            $stmt->bind_param("iii", $qty, $userId, $menuId);
         }
         return $stmt->execute();
     }
