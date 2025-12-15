@@ -45,3 +45,18 @@ CREATE TABLE order_items (
     FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
     FOREIGN KEY (menu_id) REFERENCES menu(menu_id) ON DELETE SET NULL
 );
+
+INSERT INTO `menu` (`name`, `price`, `stock`, `image`) VALUES
+-- Makanan Berat & Ringan
+('Nasi Goreng Spesial', 15000, 20, 'nasigoreng.jpg'),
+('Ayam Geprek Sambal Bawang', 13000, 25, 'ayamgeprek.jpg'),
+('Soto Ayam Lamongan', 12000, 15, 'soto.jpg'),
+('Nasi Uduk Komplit', 14000, 10, 'nasiuduk.jpg'),
+('Mie Goreng Telur', 10000, 30, 'miegoreng.jpg'),
+('Gorengan Bakwan', 1000, 100, 'bakwan.jpg'),
+
+-- Minuman Segar
+('Es Teh Manis', 3000, 50, 'esteh.jpg'),
+('Es Jeruk Peras', 4000, 40, 'esjeruk.jpg'),
+('Kopi Hitam Kapal Api', 3000, 20, 'kopi.jpg'),
+('Cappucino Cincau', 5000, 25, 'capcin.jpg');
